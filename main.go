@@ -1,31 +1,84 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/url"
-	"os"
 	"os/exec"
 	"strings"
 )
 
 func main() {
-	if len(os.Args) < 2 {
-		fmt.Println("Usage: gosearch <query>")
-		return
+	browser := flag.String("browser", "chrome", "browser to open")
+	flag.Parse()
 
+	if flag.NArg() == 0 {
+		fmt.Println("Usage: gosearch [engine] <query>")
+		return
 	}
 
-	queryparts := os.Args[1:]
-	query := strings.Join(queryparts, "")
+	args := flag.Args()
 
-	params := url.Values{}
-	params.Set("q", query)
-	searchURL := "https://www.google.com/search?" + params.Encode()
-	cmd := exec.Command("/mnt/c/Program Files/Google/Chrome/Application/chrome.exe", searchURL)
+	engine := "google"
+	queryStart := 0
+
+	if args[0] == "gh" {
+		engine = "github"
+		queryStart = 1
+	} else if args[0] == "yt" {
+		engine = "youtube"
+		queryStart = 1
+	} else if args[0] == "docs" {
+		engine = "docs"
+		queryStart = 1
+	}
+
+	if len(args) <= queryStart {
+		fmt.Println("Missing search query")
+		return
+	}
+
+	query := strings.Join(args[queryStart:], " ")
+
+	var searchURL string
+
+	switch engine {
+	case "google":
+		searchURL = "https://www.google.com/search?" +
+			url.Values{"q": []string{query}}.Encode()
+
+	case "github":
+		searchURL = "https://github.com/search?" +
+			url.Values{"q": []string{query}}.Encode()
+
+	case "youtube":
+		searchURL = "https://www.youtube.com/results?" +
+			url.Values{"search_query": []string{query}}.Encode()
+
+	case "docs":
+		searchURL = "https://pkg.go.dev/search?" +
+			url.Values{"q": []string{query}}.Encode()
+	}
+
+	fmt.Println("Searching", engine, "for:", query)
+
+	var cmd *exec.Cmd
+
+	switch *browser {
+	case "chrome":
+		cmd = exec.Command(
+			"/mnt/c/Program Files/Google/Chrome/Application/chrome.exe",
+			searchURL,
+		)
+
+	default:
+		fmt.Println("Unknown browser:", *browser)
+		return
+	}
+
 	err := cmd.Run()
 	if err != nil {
 		fmt.Println("error opening browser:", err)
 		return
 	}
-
 }
