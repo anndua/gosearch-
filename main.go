@@ -21,12 +21,27 @@ const (
 func main() {
 	browser := flag.String("browser", "chrome", "browser to open")
 
+	google := flag.Bool("google", false, "search Google")
+	github := flag.Bool("gh", false, "search GitHub")
+	youtube := flag.Bool("yt", false, "search YouTube")
+	docs := flag.Bool("docs", false, "search Go documentation")
+
 	flag.Usage = func() {
 		fmt.Println()
 		fmt.Println(bold + cyan + "  S - Terminal Search" + reset)
 		fmt.Println()
 		fmt.Println("  Usage:")
 		fmt.Println("    s [options] <query>")
+		fmt.Println()
+		fmt.Println("  Search Engines:")
+		fmt.Println("    -google")
+		fmt.Println("        Search Google (default)")
+		fmt.Println("    -gh")
+		fmt.Println("        Search GitHub")
+		fmt.Println("    -yt")
+		fmt.Println("        Search YouTube")
+		fmt.Println("    -docs")
+		fmt.Println("        Search Go documentation")
 		fmt.Println()
 		fmt.Println("  Options:")
 		fmt.Println("    -browser string")
@@ -36,8 +51,9 @@ func main() {
 		fmt.Println()
 		fmt.Println("  Examples:")
 		fmt.Println("    s golang")
-		fmt.Println("    s \"golang concurrency\"")
-		fmt.Println("    s -browser chrome linux")
+		fmt.Println("    s -gh golang")
+		fmt.Println("    s -yt \"golang tutorial\"")
+		fmt.Println("    s -docs \"net/http\"")
 		fmt.Println()
 	}
 
@@ -48,15 +64,59 @@ func main() {
 		return
 	}
 
+	// Make sure only one search engine was selected.
+	engineCount := 0
+
+	if *google {
+		engineCount++
+	}
+
+	if *github {
+		engineCount++
+	}
+
+	if *youtube {
+		engineCount++
+	}
+
+	if *docs {
+		engineCount++
+	}
+
+	if engineCount > 1 {
+		fmt.Println(red + "  Error:" + reset + " choose only one search engine")
+		return
+	}
+
 	query := strings.Join(flag.Args(), " ")
 
-	params := url.Values{}
-	params.Set("q", query)
+	var searchURL string
+	var engineName string
 
-	searchURL := "https://www.google.com/search?" + params.Encode()
+	switch {
+	case *github:
+		engineName = "GitHub"
+		searchURL = "https://github.com/search?" +
+			url.Values{"q": []string{query}}.Encode()
+
+	case *youtube:
+		engineName = "YouTube"
+		searchURL = "https://www.youtube.com/results?" +
+			url.Values{"search_query": []string{query}}.Encode()
+
+	case *docs:
+		engineName = "Go Docs"
+		searchURL = "https://pkg.go.dev/search?" +
+			url.Values{"q": []string{query}}.Encode()
+
+	default:
+		engineName = "Google"
+		searchURL = "https://www.google.com/search?" +
+			url.Values{"q": []string{query}}.Encode()
+	}
 
 	fmt.Println()
-	fmt.Println(cyan + "  Searching Google for:" + reset)
+	fmt.Println(cyan + "  Searching " + engineName + " for:" + reset)
 	fmt.Println("  " + bold + query + reset)
 	fmt.Println()
 
