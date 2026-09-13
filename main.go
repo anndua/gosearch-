@@ -8,59 +8,57 @@ import (
 	"strings"
 )
 
+const (
+	reset  = "\033[0m"
+	red    = "\033[31m"
+	green  = "\033[32m"
+	cyan   = "\033[36m"
+	yellow = "\033[33m"
+	blue   = "\033[34m"
+	bold   = "\033[1m"
+)
+
 func main() {
 	browser := flag.String("browser", "chrome", "browser to open")
+
+	flag.Usage = func() {
+		fmt.Println()
+		fmt.Println(bold + cyan + "  S - Terminal Search" + reset)
+		fmt.Println()
+		fmt.Println("  Usage:")
+		fmt.Println("    s [options] <query>")
+		fmt.Println()
+		fmt.Println("  Options:")
+		fmt.Println("    -browser string")
+		fmt.Println("        browser to open (default: chrome)")
+		fmt.Println("    -h, -help")
+		fmt.Println("        show this help")
+		fmt.Println()
+		fmt.Println("  Examples:")
+		fmt.Println("    s golang")
+		fmt.Println("    s \"golang concurrency\"")
+		fmt.Println("    s -browser chrome linux")
+		fmt.Println()
+	}
+
 	flag.Parse()
 
 	if flag.NArg() == 0 {
-		fmt.Println("Usage: gosearch [engine] <query>")
+		flag.Usage()
 		return
 	}
 
-	args := flag.Args()
+	query := strings.Join(flag.Args(), " ")
 
-	engine := "google"
-	queryStart := 0
+	params := url.Values{}
+	params.Set("q", query)
 
-	if args[0] == "gh" {
-		engine = "github"
-		queryStart = 1
-	} else if args[0] == "yt" {
-		engine = "youtube"
-		queryStart = 1
-	} else if args[0] == "docs" {
-		engine = "docs"
-		queryStart = 1
-	}
+	searchURL := "https://www.google.com/search?" + params.Encode()
 
-	if len(args) <= queryStart {
-		fmt.Println("Missing search query")
-		return
-	}
-
-	query := strings.Join(args[queryStart:], " ")
-
-	var searchURL string
-
-	switch engine {
-	case "google":
-		searchURL = "https://www.google.com/search?" +
-			url.Values{"q": []string{query}}.Encode()
-
-	case "github":
-		searchURL = "https://github.com/search?" +
-			url.Values{"q": []string{query}}.Encode()
-
-	case "youtube":
-		searchURL = "https://www.youtube.com/results?" +
-			url.Values{"search_query": []string{query}}.Encode()
-
-	case "docs":
-		searchURL = "https://pkg.go.dev/search?" +
-			url.Values{"q": []string{query}}.Encode()
-	}
-
-	fmt.Println("Searching", engine, "for:", query)
+	fmt.Println()
+	fmt.Println(cyan + "  Searching Google for:" + reset)
+	fmt.Println("  " + bold + query + reset)
+	fmt.Println()
 
 	var cmd *exec.Cmd
 
@@ -72,13 +70,17 @@ func main() {
 		)
 
 	default:
-		fmt.Println("Unknown browser:", *browser)
+		fmt.Println(red+"  Error:"+reset+" unsupported browser:", *browser)
 		return
 	}
 
+	fmt.Println(green + "  ✓ Opening Chrome..." + reset)
+
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println("error opening browser:", err)
+		fmt.Println(red+"  ✗ Error opening browser:"+reset, err)
 		return
 	}
+
+	fmt.Println(green + "  ✓ Done" + reset)
 }
